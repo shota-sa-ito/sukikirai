@@ -1,10 +1,13 @@
+import json
 from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, List
 
+from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
+from langchain.chains import ConversationChain
 import streamlit as st
 
 from local import api_key
@@ -32,6 +35,7 @@ class MyState:
     page: Page = Page.top
 
 
+
 class Main:
     
     def __init__(self) -> None:
@@ -53,7 +57,8 @@ class Main:
     def top_page(self):
         # 年齢範囲
         # Todo: 年齢範囲の入力時、上限と下限の関係性を考慮する
-        age_lower = st.slider("年齢上限を選択してください", 20, 60, 20)
+        # Todo: デフォルト値を消す
+        age_lower = st.slider("年齢上限を選択してください", 20, 60, 25)
         age_upper = st.slider("年齢下限を選択してください", 20, 60, 30)
         age_range = f"{age_lower}-{age_upper}"
 
@@ -61,13 +66,13 @@ class Main:
         gender = st.radio("性別を選択してください", ["男性", "女性"])
 
         # 趣味・興味
-        hobbies_interests = st.text_input("趣味・興味を入力してください")
+        hobbies_interests = st.text_input("趣味・興味を入力してください", value="ゲーム")
 
         # 性格(自由記述)
-        personality_type = st.text_input("性格を入力してください")
+        personality_type = st.text_input("性格を入力してください", value="のんびり")
 
         # 休日の過ごし方(自由記述)
-        holiday_preference = st.text_input("休日の過ごし方を入力してください")
+        holiday_preference = st.text_input("休日の過ごし方を入力してください", "寝る")
 
         # ボタン
         if not st.button("送信"):
@@ -93,31 +98,50 @@ class Main:
         st.session_state.my_state.answers = []
 
     def question_page(self):
-        max_count = 2
+        max_count = 4
         @st.cache_data()
         def get_from_ai(req: RequestFirst, count: int):
             # Todo: implementation
-            return self.chat_model.predict("こんにちは")
+            template = (f"ユーザー情報: (年齢: {req.age_range}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}) "
+                        f"ChatGPTのタスク: (ユーザー情報のすべてを使用してそのユーザーの普段の生活で困っていそうなことを予想して1文にまとめてください。)")
+            conversation: ConversationChain = ConversationChain(
+                llm=self.llm,
+                verbose=True,
+                memory=ConversationBufferMemory()
+            )
+            conversation.predict(input=template)
+            template = (
+                '予想した行動に対して最も解決したほうがいい具体的な質問を生成してください。'
+                '質問に対して〇〇していないのような否定系でネガティブな選択肢4つを提供してください。'
+                '質問は難しくせず小学生でも分かるような言葉にしてください。'
+                '質問と選択肢以外は出力しないでください。json形式で出力してください。'
+                '例: {"question": "ストレスを管理するために、以下の選択肢の中から最も当てはまる行動を選んでください。", "selections": ["ストレスを全く意識していない。","ストレスが溜まったら感情を爆発させてしまう。","ストレスへの対処方法を知らない","定期的にリラクゼーション法を実践していない"]'
+            )
+            question_and_answer_str_raw = conversation.predict(input=template)
+            question_and_answer_str = json.loads(question_and_answer_str_raw)
+            template = 'ChatGPTのタスク: (selectionsに対して改善するアドバイスを生成してください。questionとselectionsは出力せずアドバイスのみを出力してください。json形式で出力してください。例: {"answer": ["体の健康を維持するための良い習慣を持っている。しかし、心のリラックスも大切にすること。","心の健康を維持するための良い習慣を持っている。しかし、体の活動も忘れずに。","趣味の時間を大切にしているが、長時間のゲームは体や目への負担となる可能性がある。","エンジニアとしての熱心さが伺えるが、適切な休息が不足している可能性が高い。"]})'
+            advise_str_raw = conversation.predict(input=template)
+            advise_str = json.loads(advise_str_raw)
+            return [question_and_answer_str, advise_str]
 
         count = len(st.session_state.my_state.answers)
-        result = get_from_ai(st.session_state.my_state.request_first, count)
-
-        if count == 0:
-            question = "明日の天気は"
-            selections = ["晴れ", "くもり", "雨", "雪", "雷"]
-        elif count == 1:
-            question = "好きな色は？"
-            selections = ["アカ", "アオ", "ミドリ", "キイロ", "モモイロ"]
-        else:
-            print("Unreachable")
-            return
+        while True:
+            try:
+                result = get_from_ai(st.session_state.my_state.request_first, count)
+            except json.JSONDecodeError:
+                continue
+            break
+        qa = result[0]
+        question = qa['question']
+        selections = qa['selections']
+        advice = result[1]['answer']
         st.text(question)
         answer = [st.button(s) for s in selections]
         # 答えなかったばあい
         if not any(answer):
             return
         # 答えた場合の処理
-        st.session_state.my_state.answers.append(selections[answer.index(True)])
+        st.session_state.my_state.answers.append(advice[answer.index(True)])
         if count + 1 >= max_count:
             # 答えきった場合の処理
             self.init_answer_page()
