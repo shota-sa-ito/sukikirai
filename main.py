@@ -107,7 +107,7 @@ class Main:
         st.session_state.my_state.answers = []
 
     def question_page(self):
-        max_count = 1
+        max_count = 4
         @st.cache_data()
         def get_from_ai(req: RequestFirst, count: int):
             template = (f"ユーザー情報: (年齢: {req.age_range}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}) "
