@@ -73,7 +73,6 @@ class Main:
         if not st.button("送信"):
             return
 
-        st.write('Just a moment!')
         # Todo: バリデーション
         req = RequestFirst(
             age_range=age_range,
@@ -91,30 +90,50 @@ class Main:
     def init_question_page_state(self, req: RequestFirst):
         st.session_state.my_state.request_first = req
         st.session_state.my_state.page = Page.quesion
-        st.session_state.my_state.answer = []
+        st.session_state.my_state.answers = []
 
     def question_page(self):
+        max_count = 2
         @st.cache_data()
-        def get_from_ai(req: RequestFirst):
+        def get_from_ai(req: RequestFirst, count: int):
             # Todo: implementation
             return self.chat_model.predict("こんにちは")
-        result = get_from_ai(st.session_state.my_state.request_first)
-        question = "明日の天気は"
-        selections = ["晴れ", "くもり", "雨", "雪", "雷"]
+
+        count = len(st.session_state.my_state.answers)
+        result = get_from_ai(st.session_state.my_state.request_first, count)
+
+        if count == 0:
+            question = "明日の天気は"
+            selections = ["晴れ", "くもり", "雨", "雪", "雷"]
+        elif count == 1:
+            question = "好きな色は？"
+            selections = ["アカ", "アオ", "ミドリ", "キイロ", "モモイロ"]
+        else:
+            print("Unreachable")
+            return
         st.text(question)
         answer = [st.button(s) for s in selections]
+        # 答えなかったばあい
         if not any(answer):
             return
         # 答えた場合の処理
-        # 答えきった場合の処理
+        st.session_state.my_state.answers.append(selections[answer.index(True)])
+        if count + 1 >= max_count:
+            # 答えきった場合の処理
+            self.init_answer_page()
+        st.rerun()
+
+    def init_answer_page(self):
+        st.session_state.my_state.page = Page.answer
 
     def answer_page(self):
-        @st.cache()
+        @st.cache_data()
         def get_from_ai(req: RequestFirst):
             # Todo: implementation
             return self.chat_model.predict("こんにちは")
         
         result = get_from_ai(st.session_state.my_state.request_first)
+        st.text(st.session_state.my_state.answers)
 
     def _main(self):
         # stateの初期化
@@ -135,11 +154,11 @@ class Main:
         else:
             print("Unreachable")
 
-    
     @staticmethod
     def main():
         main = Main()
         main._main()
+
 
 if __name__ == "__main__":
     Main.main()
