@@ -26,6 +26,8 @@ class RequestFirst:
     hobbies_interests: str
     personality_type: str
     holiday_preference: str
+    partner_gender: str
+    partner_character: str
 
 
 @dataclass
@@ -58,21 +60,26 @@ class Main:
         # 年齢範囲
         # Todo: 年齢範囲の入力時、上限と下限の関係性を考慮する
         # Todo: デフォルト値を消す
-        age_lower = st.slider("年齢上限を選択してください", 20, 60, 25)
-        age_upper = st.slider("年齢下限を選択してください", 20, 60, 30)
+        st.header("あなたの情報を記載してください。")
+        age_lower = st.slider("年齢下限を選択してください", 20, 60, 25)
+        age_upper = st.slider("年齢上限を選択してください", 20, 60, 30)
         age_range = f"{age_lower}-{age_upper}"
 
         # 性別
         gender = st.radio("性別を選択してください", ["男性", "女性"])
 
         # 趣味・興味
-        hobbies_interests = st.text_input("趣味・興味を入力してください", value="ゲーム")
+        hobbies_interests = st.text_input("趣味・興味を入力してください")
 
         # 性格(自由記述)
-        personality_type = st.text_input("性格を入力してください", value="のんびり")
+        personality_type = st.text_input("性格を入力してください")
 
         # 休日の過ごし方(自由記述)
-        holiday_preference = st.text_input("休日の過ごし方を入力してください", "寝る")
+        holiday_preference = st.text_input("休日の過ごし方を入力してください")
+
+        st.header("理想の相手の情報を記載してください。")
+        partner_gender = st.radio("理想の相手の性別を選択してください", ["男性", "女性"])
+        partner_character = st.selectbox("相手の性格は？", ["頼りになる", "可愛らしい", "物静か"])
 
         # ボタン
         if not st.button("送信"):
@@ -84,7 +91,9 @@ class Main:
             gender=gender,
             hobbies_interests=hobbies_interests,
             personality_type=personality_type,
-            holiday_preference=holiday_preference
+            holiday_preference=holiday_preference,
+            partner_gender=partner_gender,
+            partner_character=partner_character
         )
         self.init_question_page_state(req)
         # ページ遷移のため再実行
@@ -98,10 +107,9 @@ class Main:
         st.session_state.my_state.answers = []
 
     def question_page(self):
-        max_count = 4
+        max_count = 1
         @st.cache_data()
         def get_from_ai(req: RequestFirst, count: int):
-            # Todo: implementation
             template = (f"ユーザー情報: (年齢: {req.age_range}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}) "
                         f"ChatGPTのタスク: (ユーザー情報のすべてを使用してそのユーザーの普段の生活で困っていそうなことを予想して1文にまとめてください。)")
             conversation: ConversationChain = ConversationChain(
@@ -121,7 +129,12 @@ class Main:
             question_and_answer_str = json.loads(question_and_answer_str_raw)
             template = 'ChatGPTのタスク: (selectionsに対して改善するアドバイスを生成してください。questionとselectionsは出力せずアドバイスのみを出力してください。json形式で出力してください。例: {"answer": ["体の健康を維持するための良い習慣を持っている。しかし、心のリラックスも大切にすること。","心の健康を維持するための良い習慣を持っている。しかし、体の活動も忘れずに。","趣味の時間を大切にしているが、長時間のゲームは体や目への負担となる可能性がある。","エンジニアとしての熱心さが伺えるが、適切な休息が不足している可能性が高い。"]})'
             advise_str_raw = conversation.predict(input=template)
-            advise_str = json.loads(advise_str_raw)
+            # Todo: たまにjson形式で出力してくれないときがある(のでデバッグ用に出力)
+            try:
+                advise_str = json.loads(advise_str_raw)
+            except json.JSONDecodeError as e:
+                print(advise_str_raw)
+                raise e
             return [question_and_answer_str, advise_str]
 
         count = len(st.session_state.my_state.answers)
@@ -152,12 +165,36 @@ class Main:
 
     def answer_page(self):
         @st.cache_data()
-        def get_from_ai(req: RequestFirst):
+        def get_from_ai():
+            advices = st.session_state.my_state.answers
+            req: RequestFirst = st.session_state.my_state.request_first
             # Todo: implementation
-            return self.chat_model.predict("こんにちは")
+            template = (
+                f"""
+                以下の文章をすごく{req.partner_character}な{req.partner_gender}の口調で表現してください。表現したものは必ず「」で閉じてください。
+                {advices[0]}
+                {advices[1]}
+                {advices[2]}
+                {advices[3]}
+                
+                また、{req.partner_character}な{req.partner_gender}の目線で解決方法を付け足してください。次のjson形式にしてください
+                """
+                """
+                {"tone1": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone2": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone3": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone4": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。",}
+                
+                ただし、以下の文章は生成しないでください。
+                - 自分の話。
+                - セリフ以外の文章
+                - 口調の説明
+                """
+            )
+            text = self.llm.predict(template)
+            return json.loads(text)
         
-        result = get_from_ai(st.session_state.my_state.request_first)
-        st.text(st.session_state.my_state.answers)
+        result = get_from_ai()
+        print(result)
+        for i in range(1, 4+1):
+            st.text(result[f'tone{i}'])
 
     def _main(self):
         # stateの初期化
