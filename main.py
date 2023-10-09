@@ -37,7 +37,6 @@ class MyState:
     page: Page = Page.top
 
 
-
 class Main:
     
     def __init__(self) -> None:
@@ -172,13 +171,9 @@ class Main:
             template = (
                 f"""
                 以下の文章をすごく{req.partner_character}な{req.partner_gender}の口調で表現してください。表現したものは必ず「」で閉じてください。
-                {advices[0]}
-                {advices[1]}
-                {advices[2]}
-                {advices[3]}
-                
-                また、{req.partner_character}な{req.partner_gender}の目線で解決方法を付け足してください。次のjson形式にしてください
                 """
+                + advices.join('\n')
+                + f"また、{req.partner_character}な{req.partner_gender}の目線で解決方法を付け足してください。次のjson形式にしてください"
                 """
                 {"tone1": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone2": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone3": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。","tone4": "心のリラックスも忘れずにね。ストレスをためないように、趣味やリラックスする時間を持つのも大切だよ。心も体も元気でいたいからね。",}
                 
@@ -191,10 +186,10 @@ class Main:
             text = self.llm.predict(template)
             return json.loads(text)
         
-        result = get_from_ai()
+        result: dict[str, str] = get_from_ai()
         print(result)
-        for i in range(1, 4+1):
-            st.text(result[f'tone{i}'])
+        for v in result.values():
+            st.text(v)
 
     def _main(self):
         # stateの初期化
