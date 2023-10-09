@@ -71,7 +71,7 @@ class Main:
         # 性別
         gender = st.radio("性別を選択してください", ["男性", "女性"])
         # 職業
-        work = st.text("職業を入力してください。")
+        work = st.text_input("職業を入力してください。")
 
         # 趣味・興味
         hobbies_interests = st.text_input("趣味・興味を入力してください")
