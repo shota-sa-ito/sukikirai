@@ -210,7 +210,8 @@ class Main:
         if 'my_state' not in st.session_state:
             st.session_state.my_state = MyState(request_first=None, page=Page.top, answers=None)
         # タイトルの設定
-        st.title("すききらい")
+        st.title("MIRAI NO IRAI")
+        st.text("未来の二人へ、今日からの挑戦。")
 
         # Stateに合わせてページを表示分ける
         page = st.session_state.my_state.page.value
