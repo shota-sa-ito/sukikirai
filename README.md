@@ -33,3 +33,46 @@ poetry shell
 ```
 streamlit run main.py
 ```
+
+## 動作環境
+- 今回はcolab上でアプリケーションを起動し、ngrokで外部公開した
+- sukikirai.ipynb
+## googl colab 上での秘匿情報の扱い方
+- 秘匿情報を書いた txt を googl drive の任意の場所に保存(今回はmydrive)
+- 以下で drive と colab をつなげる
+  - window が開くので承認する
+```
+from google.colab import drive
+drive.mount('/content/drive')
+```
+- ファイルを指定して変数名に保存する
+```
+with open('/content/drive/My Drive/unkstone/api_key.txt', 'r') as file:
+    api_key = file.readline().strip()
+```
+
+## ngrok で　colab 上から外部公開する
+- ngrok の会員登録をして左タブの Your Authtoken からアクセスキーを取得
+- pyngrok をインストール
+```
+!pip install pyngrok --quiet
+```
+- アプリケーションコードの一番上に以下のコードを追加
+```
+%%writefile app.py
+```
+- アプリケーションを起動
+  - portはngrokと合わせておく必要がある
+```
+!streamlit run app.py --server.port 8051 &>/dev/null&
+```
+- 以下で外部公開をする
+```
+# アクセスキーを適用
+!ngrok authtoken ngrok_key
+ngrok.kill()
+# pygronkにアクセスキーを登録
+ngrok.set_auth_token(ngrok_key)
+# 公開
+public_url = ngrok.connect(8051).public_url
+```
