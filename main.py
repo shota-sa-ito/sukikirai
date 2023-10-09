@@ -140,9 +140,9 @@ class Main:
             )
             question_and_answer_str_raw = conversation.predict(input=template)
             question_and_answer_str = json.loads(question_and_answer_str_raw)
-            template = (f'selections:['
+            template = (f'ChatGPTのタスク: (selections:['
                         + ', '.join(question_and_answer_str['selections'])
-                        +']ChatGPTのタスク: (selectionsに対して改善するアドバイスを生成してください。questionとselectionsは出力せずアドバイスのみを出力してください。json形式で出力してください。例: {"answer": ["体の健康を維持するための良い習慣を持っている。しかし、心のリラックスも大切にすること。","心の健康を維持するための良い習慣を持っている。しかし、体の活動も忘れずに。","趣味の時間を大切にしているが、長時間のゲームは体や目への負担となる可能性がある。","エンジニアとしての熱心さが伺えるが、適切な休息が不足している可能性が高い。"]})')
+                        + ']selectionsに対して改善するアドバイスを生成してください。questionとselectionsは出力せずアドバイスのみを出力してください。json形式で出力してください。例: {"answer": ["体の健康を維持するための良い習慣を持っている。しかし、心のリラックスも大切にすること。","心の健康を維持するための良い習慣を持っている。しかし、体の活動も忘れずに。","趣味の時間を大切にしているが、長時間のゲームは体や目への負担となる可能性がある。","エンジニアとしての熱心さが伺えるが、適切な休息が不足している可能性が高い。"]})')
             advise_str_raw = conversation.predict(input=template)
             conversation.memory.clear()
             # Todo: たまにjson形式で出力してくれないときがある(のでデバッグ用に出力)
