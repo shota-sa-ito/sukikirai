@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI
+from langchain.llms.openai import OpenAI
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationChain
 import streamlit as st
@@ -41,7 +41,7 @@ class MyState:
 class Main:
     
     def __init__(self) -> None:
-        self.llm = OpenAI(openai_api_key=api_key)
+        self.llm = OpenAI(openai_api_key=api_key, model_name="gpt-3.5-turbo-0613")
         self.chat_model = ChatOpenAI(openai_api_key=api_key)
 
     def request_first(self, req: RequestFirst) -> str:
@@ -59,7 +59,6 @@ class Main:
     def top_page(self):
         # 年齢範囲
         # Todo: 年齢範囲の入力時、上限と下限の関係性を考慮する
-        # Todo: デフォルト値を消す
         st.header("あなたの情報を記載してください。")
         age_lower = st.slider("年齢下限を選択してください", 20, 60, 25)
         age_upper = st.slider("年齢上限を選択してください", 20, 60, 30)
@@ -112,6 +111,7 @@ class Main:
         def get_from_ai(req: RequestFirst, count: int):
             template = (f"ユーザー情報: (年齢: {req.age_range}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}) "
                         f"ChatGPTのタスク: (ユーザー情報のすべてを使用してそのユーザーの普段の生活で困っていそうなことを予想して1文にまとめてください。)")
+            # Todo: 会話履歴が残ってしまっている
             conversation: ConversationChain = ConversationChain(
                 llm=self.llm,
                 verbose=True,
@@ -129,6 +129,7 @@ class Main:
             question_and_answer_str = json.loads(question_and_answer_str_raw)
             template = 'ChatGPTのタスク: (selectionsに対して改善するアドバイスを生成してください。questionとselectionsは出力せずアドバイスのみを出力してください。json形式で出力してください。例: {"answer": ["体の健康を維持するための良い習慣を持っている。しかし、心のリラックスも大切にすること。","心の健康を維持するための良い習慣を持っている。しかし、体の活動も忘れずに。","趣味の時間を大切にしているが、長時間のゲームは体や目への負担となる可能性がある。","エンジニアとしての熱心さが伺えるが、適切な休息が不足している可能性が高い。"]})'
             advise_str_raw = conversation.predict(input=template)
+            conversation.memory.clear()
             # Todo: たまにjson形式で出力してくれないときがある(のでデバッグ用に出力)
             try:
                 advise_str = json.loads(advise_str_raw)
@@ -168,7 +169,6 @@ class Main:
         def get_from_ai():
             advices = st.session_state.my_state.answers
             req: RequestFirst = st.session_state.my_state.request_first
-            # Todo: implementation
             template = (
                 f"""
                 以下の文章をすごく{req.partner_character}な{req.partner_gender}の口調で表現してください。表現したものは必ず「」で閉じてください。
