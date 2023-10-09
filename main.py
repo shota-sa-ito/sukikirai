@@ -21,13 +21,18 @@ class Page(Enum):
 
 @dataclass
 class RequestFirst:
-    age_range: str
+    age: str
     gender: str
     hobbies_interests: str
     personality_type: str
     holiday_preference: str
     partner_gender: str
     partner_character: str
+    partner_work: str
+    partner_hobby: str
+    length: str
+    weight: str
+    work: str
 
 
 @dataclass
@@ -57,14 +62,16 @@ class Main:
 
     def top_page(self):
         # 年齢範囲
-        # Todo: 年齢範囲の入力時、上限と下限の関係性を考慮する
         st.header("あなたの情報を記載してください。")
-        age_lower = st.slider("年齢下限を選択してください", 20, 60, 25)
-        age_upper = st.slider("年齢上限を選択してください", 20, 60, 30)
-        age_range = f"{age_lower}-{age_upper}"
-
+        age = st.slider("年齢を選択してください", 20, 60, 25)
+        # 身長
+        length = st.slider("身長を入力してください。", 100, 250, 150)
+        # 体重
+        weight = st.slider("体重を入力してください。", 0, 300, 70)
         # 性別
         gender = st.radio("性別を選択してください", ["男性", "女性"])
+        # 職業
+        work = st.text("職業を入力してください。")
 
         # 趣味・興味
         hobbies_interests = st.text_input("趣味・興味を入力してください")
@@ -78,6 +85,8 @@ class Main:
         st.header("理想の相手の情報を記載してください。")
         partner_gender = st.radio("理想の相手の性別を選択してください", ["男性", "女性"])
         partner_character = st.selectbox("相手の性格は？", ["頼りになる", "可愛らしい", "物静か"])
+        partner_hobby = st.selectbox("相手の趣味は？", ["自分と同じ", "別な趣味を持っているが理解してくれる。", "無趣味"])
+        partner_work = st.selectbox("仕事は", ["共働き", "専業主婦"])
 
         # ボタン
         if not st.button("送信"):
@@ -85,13 +94,18 @@ class Main:
 
         # Todo: バリデーション
         req = RequestFirst(
-            age_range=age_range,
+            age=age,
             gender=gender,
             hobbies_interests=hobbies_interests,
             personality_type=personality_type,
             holiday_preference=holiday_preference,
             partner_gender=partner_gender,
-            partner_character=partner_character
+            partner_character=partner_character,
+            partner_hobby=partner_hobby,
+            partner_work=partner_work,
+            length=length,
+            weight=weight,
+            work=work
         )
         self.init_question_page_state(req)
         # ページ遷移のため再実行
@@ -108,7 +122,7 @@ class Main:
         max_count = 4
         @st.cache_data()
         def get_from_ai(req: RequestFirst, count: int):
-            template = (f"ユーザー情報: (年齢: {req.age_range}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}) "
+            template = (f"ユーザー情報: (年齢: {req.age}, 性格: {req.personality_type}, 性別: {req.gender}, 休日の過ごし方: {req.holiday_preference}, 趣味: {req.hobbies_interests}, 仕事: {req.work}, 身長: {req.length}, 体重: {req.weight}) "
                         f"ChatGPTのタスク: (ユーザー情報のすべてを使用してそのユーザーの普段の生活で困っていそうなことを予想して1文にまとめてください。)")
             # Todo: 会話履歴が残ってしまっている
             conversation: ConversationChain = ConversationChain(
